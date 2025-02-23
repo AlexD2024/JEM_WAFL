@@ -1,0 +1,11 @@
+{
+    "weatherlink": 
+    ["windSpdAvg", "uvDose", "windSpdHi", "windDirOfHi", "windChill", "solarRadHi", 
+    "degDaysHet", "thwIndex", "bar", "humOut", "tzOffset", "uvIndexhi", "tempOut", "tempOutLo", 
+    "wetBulb", "tempOutHi", "solarRadAvg", "barAlt", "archInt", "windRun", "solarEnergy",
+     "dewPointOut", "rainRateHiClicks", "windDirOfPrevail", "et", "airDensity", "rainfallIn",
+     "heatIndexOut", "thswIndex",  "rainfallMM", "nightCloudCover", "degDaysCool", "rainRateHighIn",
+      "uvIndexAvg", "windNumSamples", "emc", "rainRateHighMM", "revType", "rainfallClicks", "ts", "absPress"],
+      "usgs":
+      []
+    }

@@ -4,18 +4,33 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import configparser
 import os
-import sqlite3
-from pathlib import Path
+import dbWorker
+from resources import constants
+import time
 
-dbPath = '/home/pi/Desktop/PatokaProject/resources/month.db'
-confPath = '/home/pi/Desktop/PatokaProject/resources/config.ini'
+confPath = constants.configPath
 
-sender = 'SENDER_EMAIL'
+sender = constants.email
+password = constants.password
 config = configparser.ConfigParser(allow_no_value=True)
 emails = {}
 emailsReceive = {}
 toSend = {}
 configValuesExplained = {'day': 'The day the data was collected/organized.', 'curtemp': 'The latest temerature from the Weather Station.', 'hitemp': 'The highest temperature in the last 24 hours.', 'lotemp': 'The lowest Temperature in the last 24 hours.', 'totalrain24': 'The total rainfall for the last 24 hours, in inches.'}
+
+def getHigh(list: list, position: int):
+    high = 0
+    for item in list:
+        if item[position] > high:
+            high = item[position]
+    return high
+
+def getLow(list: list, position: int):
+    low = 0
+    for item in list:
+        if item[position] > low:
+            low = item[position]
+    return low
 
 def writeFile():
     config.write(open(confPath, 'w'))
@@ -54,35 +69,39 @@ def emailProcesser():
             valuesP.append(item)
         emailsReceive[key] = valuesP
 
-def sendEmail():
-    con = sqlite3.connect(dbPath)
-    cur = con.cursor()
+def sendMorningMail():
     
     for key, email_list in emails.items():
         for email in email_list:  # Loop over individual emails in email_list
-            body = ''  # Initialize body for each email
             
             # Process columns only once per email
             columns = emailsReceive[key]  # Get columns specific to this email
-            for column in columns:
-                cur.execute(f'SELECT {column} FROM monthly WHERE day>=(SELECT MAX(day) FROM monthly) LIMIT 1')
-                data = cur.fetchall()
-                if data:  # Only append if data is not empty
-                    body += f"{configValuesExplained[column]}: {data[0][0]}\n"
+            weatherlink = dbWorker.getValues(int(time.time()), int(time.time()) - (24*60*60), 'weatherlink', columns)
 
-            if body:  # Only send email if body is not empty
-                msg = MIMEMultipart()
-                msg.attach(MIMEText(str(body)))
-                msg['subject'] = 'WeatherLink Data'
-                msg['from'] = sender
-                msg['to'] = email
-                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
-                    s.login(sender, 'SENDER PASSWROD')
-                    s.sendmail(sender, email, msg.as_string())
-    
-    con.close()
+            highTemp = getHigh(weatherlink, 0)
+            lowTemp = getLow(weatherlink, 0)
+            currentTemp = weatherlink[-1][0]
+            totalRain = 0
+            for item in weatherlink:
+                totalRain += int(item[1])
+
+            body = f'''
+            24 Hour Data:
+            Total Rain: {totalRain} in
+            Highest Temperature: {highTemp} F
+            Lowest Temperature: {lowTemp} F
+            Current Temperature: {currentTemp} F'''
+
+            msg = MIMEMultipart()
+            msg.attach(MIMEText(str(body)))
+            msg['subject'] = 'WeatherLink Data'
+            msg['from'] = sender
+            msg['to'] = email
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+                s.login(sender, password)
+                s.sendmail(sender, email, msg.as_string())
 
 if __name__ == '__main__':
     configReader()
     emailProcesser()
-    sendEmail()
+    sendMorningMail()
